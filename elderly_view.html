@@ -3,24 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>今日活動 - 雲端版</title>
+<title>一週活動推介</title>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <style>
-  body { font-family: "Microsoft JhengHei", sans-serif; background: #fcfcfc; text-align: center; padding: 15px; }
-  h1 { font-size: 2.5em; color: #2c3e50; margin-bottom: 30px; }
-  .card { background: white; margin: 15px auto; padding: 25px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: left; border-left: 12px solid #4CAF50; max-width: 800px; }
+  body { font-family: "Microsoft JhengHei", sans-serif; background: #fcfcfc; text-align: center; padding: 15px; padding-bottom: 50px;}
+  h1 { font-size: 2.8em; color: #2980b9; margin-bottom: 10px; }
+  .subtitle { font-size: 1.5em; color: #7f8c8d; margin-bottom: 30px; }
+  
+  .date-header {
+    background: #4CAF50;
+    color: white;
+    font-size: 2em;
+    font-weight: bold;
+    padding: 15px;
+    border-radius: 10px;
+    max-width: 800px;
+    margin: 40px auto 10px auto;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+  
+  .card { background: white; margin: 15px auto; padding: 25px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: left; border-left: 10px solid #f39c12; max-width: 800px; }
   .title { font-size: 2.2em; color: #d35400; font-weight: bold; margin-bottom: 15px; }
   .detail { font-size: 1.6em; margin: 10px 0; color: #333; line-height: 1.4; }
   .empty-msg { font-size: 2em; color: #7f8c8d; margin-top: 50px; }
 </style>
 </head>
 <body>
-  <h1>🌟 今日中心活動 🌟</h1>
-  <div id="list"><p class="empty-msg">🔄 緊貼雲端，讀取資料中...</p></div>
+  <h1>📅 中心一週活動</h1>
+  <div class="subtitle">為你推介未來 7 日嘅精彩活動</div>
+  
+  <div id="list"><p class="empty-msg">🔄 讀取緊最新資訊...</p></div>
 
 <script>
-  // 你專屬嘅 Firebase 設定
   const firebaseConfig = {
     apiKey: "AIzaSyA1q92U6EiIt0L5Oe2K_ovXbJcizmqJbA0",
     authDomain: "elderly-center-web.firebaseapp.com",
@@ -28,24 +44,85 @@
     projectId: "elderly-center-web",
     storageBucket: "elderly-center-web.firebasestorage.app",
     messagingSenderId: "390563847715",
-    appId: "1:390563847715:web:8c1f1a051687d71cf31b96",
-    measurementId: "G-DQSYRQ20P4"
+    appId: "1:390563847715:web:8c1f1a051687d71cf31b96"
   };
 
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  // 只要雲端有變，手機就會自動更新
+  // 將 YYYY-MM-DD 轉做長者易睇嘅格式 (例如: 10月25日 星期三)
+  function formatFriendlyDate(dateStr) {
+    if (!dateStr) return "其他活動";
+    const d = new Date(dateStr);
+    const today = new Date();
+    
+    // 判斷係咪今日/聽日
+    let prefix = "";
+    if (d.toDateString() === today.toDateString()) {
+      prefix = "【今日】 ";
+    } else {
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      if (d.toDateString() === tomorrow.toDateString()) {
+        prefix = "【聽日】 ";
+      }
+    }
+
+    const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+    return `${prefix}${d.getMonth() + 1}月${d.getDate()}日 (星期${weekdays[d.getDay()]})`;
+  }
+
   db.ref('activities').on('value', (snapshot) => {
     const list = document.getElementById('list');
     if (!snapshot.exists()) {
-      list.innerHTML = "<p class='empty-msg'>今日暫時未有活動，請稍後再睇啦！🍵</p>";
+      list.innerHTML = "<p class='empty-msg'>暫時未有活動，請稍後再睇啦！🍵</p>";
       return;
     }
-    list.innerHTML = "";
+    
+    let acts = [];
     snapshot.forEach((child) => {
-      const data = child.val();
-      list.innerHTML += `
+      acts.push(child.val());
+    });
+
+    // 獲取今日日期 (清除時間，只計日子)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // 獲取 7 日後嘅日期
+    const nextWeek = new Date(today);
+    nextWeek.setDate(today.getDate() + 7);
+
+    // 篩選：只顯示有填日期，而且係「今日起計 7 日內」嘅活動
+    acts = acts.filter(a => {
+      if (!a.date) return false;
+      const actDate = new Date(a.date);
+      return actDate >= today && actDate <= nextWeek;
+    });
+
+    if (acts.length === 0) {
+      list.innerHTML = "<p class='empty-msg'>未來一週暫時未有活動，請稍後再睇啦！🍵</p>";
+      return;
+    }
+
+    // 排序：先排日期，再排時間
+    acts.sort((a, b) => {
+      if (a.date === b.date) return a.time.localeCompare(b.time);
+      return a.date.localeCompare(b.date);
+    });
+
+    // 渲染畫面：按日期分組
+    let htmlOutput = "";
+    let currentDate = "";
+
+    acts.forEach((data) => {
+      // 如果日期轉咗，就加一個新嘅「日期大標題」
+      if (data.date !== currentDate) {
+        htmlOutput += `<div class="date-header">${formatFriendlyDate(data.date)}</div>`;
+        currentDate = data.date;
+      }
+      
+      // 輸出活動卡片
+      htmlOutput += `
         <div class="card">
           <div class="title">${data.name}</div>
           <div class="detail">⏰ 時間：${data.time}</div>
@@ -54,6 +131,8 @@
         </div>
       `;
     });
+
+    list.innerHTML = htmlOutput;
   });
 </script>
 </body>
