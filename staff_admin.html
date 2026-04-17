@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>職員管理 - 雲端版</title>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<style>
+  body { font-family: "Microsoft JhengHei", sans-serif; background-color: #eaf2f8; padding: 20px; }
+  .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 10px; }
+  input, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; font-size: 1.1em;}
+  .submit-btn { width: 100%; padding: 15px; background: #3498db; color: white; border: none; font-size: 1.2em; cursor: pointer; border-radius: 5px; }
+  .activity-item { border-bottom: 1px solid #eee; padding: 15px 0; display: flex; justify-content: space-between; align-items: center; }
+  .delete-btn { background: #e74c3c; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 5px; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h2 style="color: #2980b9; text-align: center;">📝 新增雲端活動</h2>
+    <form id="addForm">
+      <input type="text" id="name" placeholder="活動名稱 (例如: 防跌八段錦班)" required>
+      <input type="time" id="time" required>
+      <input type="text" id="location" placeholder="地點 (例如: 活動室 A)" required>
+      <textarea id="desc" rows="3" placeholder="活動簡介"></textarea>
+      <button type="submit" class="submit-btn">發佈到雲端</button>
+    </form>
+    <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
+    <h3 style="color: #2c3e50;">📋 現有活動 (雲端實時同步)</h3>
+    <div id="admin-list"></div>
+  </div>
+
+<script>
+  // 你專屬嘅 Firebase 設定
+  const firebaseConfig = {
+    apiKey: "AIzaSyA1q92U6EiIt0L5Oe2K_ovXbJcizmqJbA0",
+    authDomain: "elderly-center-web.firebaseapp.com",
+    databaseURL: "https://elderly-center-web-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "elderly-center-web",
+    storageBucket: "elderly-center-web.firebasestorage.app",
+    messagingSenderId: "390563847715",
+    appId: "1:390563847715:web:8c1f1a051687d71cf31b96",
+    measurementId: "G-DQSYRQ20P4"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // 新增活動
+  document.getElementById('addForm').onsubmit = (e) => {
+    e.preventDefault();
+    const newAct = {
+      name: document.getElementById('name').value,
+      time: document.getElementById('time').value,
+      location: document.getElementById('location').value,
+      desc: document.getElementById('desc').value,
+      timestamp: Date.now()
+    };
+    db.ref('activities').push(newAct); // 傳上雲端
+    document.getElementById('addForm').reset();
+    alert("✅ 活動已經成功上傳到雲端！");
+  };
+
+  // 實時更新管理列表
+  db.ref('activities').on('value', (snapshot) => {
+    const list = document.getElementById('admin-list');
+    list.innerHTML = "";
+    if (!snapshot.exists()) {
+      list.innerHTML = "<p style='color: #7f8c8d;'>暫時未有活動</p>";
+      return;
+    }
+    snapshot.forEach((child) => {
+      const data = child.val();
+      list.innerHTML += `
+        <div class="activity-item">
+          <div>
+            <b style="font-size: 1.2em; color: #2c3e50;">${data.name}</b><br>
+            <span style="color: #7f8c8d;">🕒 ${data.time} | 📍 ${data.location}</span>
+          </div>
+          <button class="delete-btn" onclick="deleteAct('${child.key}')">刪除</button>
+        </div>
+      `;
+    });
+  });
+
+  function deleteAct(key) {
+    if(confirm('確定刪除呢個活動？長者手機亦會即時移除。')) {
+      db.ref('activities/' + key).remove();
+    }
+  }
+</script>
+</body>
+</html>

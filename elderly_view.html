@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>今日活動 - 雲端版</title>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<style>
+  body { font-family: "Microsoft JhengHei", sans-serif; background: #fcfcfc; text-align: center; padding: 15px; }
+  h1 { font-size: 2.5em; color: #2c3e50; margin-bottom: 30px; }
+  .card { background: white; margin: 15px auto; padding: 25px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: left; border-left: 12px solid #4CAF50; max-width: 800px; }
+  .title { font-size: 2.2em; color: #d35400; font-weight: bold; margin-bottom: 15px; }
+  .detail { font-size: 1.6em; margin: 10px 0; color: #333; line-height: 1.4; }
+  .empty-msg { font-size: 2em; color: #7f8c8d; margin-top: 50px; }
+</style>
+</head>
+<body>
+  <h1>🌟 今日中心活動 🌟</h1>
+  <div id="list"><p class="empty-msg">🔄 緊貼雲端，讀取資料中...</p></div>
+
+<script>
+  // 你專屬嘅 Firebase 設定
+  const firebaseConfig = {
+    apiKey: "AIzaSyA1q92U6EiIt0L5Oe2K_ovXbJcizmqJbA0",
+    authDomain: "elderly-center-web.firebaseapp.com",
+    databaseURL: "https://elderly-center-web-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "elderly-center-web",
+    storageBucket: "elderly-center-web.firebasestorage.app",
+    messagingSenderId: "390563847715",
+    appId: "1:390563847715:web:8c1f1a051687d71cf31b96",
+    measurementId: "G-DQSYRQ20P4"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // 只要雲端有變，手機就會自動更新
+  db.ref('activities').on('value', (snapshot) => {
+    const list = document.getElementById('list');
+    if (!snapshot.exists()) {
+      list.innerHTML = "<p class='empty-msg'>今日暫時未有活動，請稍後再睇啦！🍵</p>";
+      return;
+    }
+    list.innerHTML = "";
+    snapshot.forEach((child) => {
+      const data = child.val();
+      list.innerHTML += `
+        <div class="card">
+          <div class="title">${data.name}</div>
+          <div class="detail">⏰ 時間：${data.time}</div>
+          <div class="detail">📍 地點：${data.location}</div>
+          <div class="detail">💡 簡介：${data.desc}</div>
+        </div>
+      `;
+    });
+  });
+</script>
+</body>
+</html>
